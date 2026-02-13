@@ -10,8 +10,10 @@ def main():
     print("Strategy: Files deleted from 'logs' will be marked as NEGATIVE (Background) for training.")
     print("          Files remaining in 'logs' are POSITIVE samples.")
     
-    # 1. Get all valid IDs from logs
+    # 1. Get all valid IDs from logs and identify active batches
     valid_ids = set()
+    active_prefixes = set() # Store YYYYMMDD_HH prefixes found in logs
+    
     log_files = glob.glob(os.path.join(LOG_DIR, "*.jpg"))
     print(f"Found {len(log_files)} positive samples in logs.")
     
@@ -22,6 +24,14 @@ def main():
             # Reconstruct ID (YYYYMMDD_HHMMSS_ffffff)
             file_id = f"{parts[0]}_{parts[1]}_{parts[2]}"
             valid_ids.add(file_id)
+            
+            # Add prefix (YYYYMMDD_HH) to active list
+            # ID format: 20260213_14xxxx...
+            # Prefix len 11: 20260213_14
+            if len(file_id) >= 11:
+                active_prefixes.add(file_id[:11])
+
+    print(f"Active batches in logs: {active_prefixes}")
 
     # 2. Process all images in dataset (train and val)
     # Recursively find all jpgs in dataset/images
@@ -32,10 +42,20 @@ def main():
     
     negative_count = 0
     positive_count = 0
+    skipped_count = 0
     
     for img_path in dataset_files:
         basename = os.path.basename(img_path)
         file_id = os.path.splitext(basename)[0]
+        
+        # Check if this file belongs to a batch we are currently cleaning
+        file_prefix = file_id[:11] if len(file_id) >= 11 else ""
+        
+        if file_prefix not in active_prefixes:
+            # SAFEGUARD: This image belongs to an old run not present in logs.
+            # Do not touch it.
+            skipped_count += 1
+            continue
         
         # Derive label path
         # images/train/foo.jpg -> labels/train/foo.txt
@@ -69,6 +89,7 @@ def main():
     print(f"Processing Complete.")
     print(f"  Positives (Drones):     {positive_count}")
     print(f"  Negatives (Background): {negative_count}")
+    print(f"  Skipped (Old Batches):  {skipped_count}")
     print("-" * 30)
 
 if __name__ == "__main__":
