@@ -54,7 +54,14 @@ def train():
     split_dataset()
 
     # 1. Load a model
-    model = YOLO("yolov8n.pt")  # load a pretrained model (n for Nano, fastest)
+    # Check for local model first to avoid internet connection if possible
+    model_file = "yolov8n.pt"
+    if os.path.exists(model_file):
+        print(f"[INFO] Loading local model from {model_file}")
+        model = YOLO(model_file)
+    else:
+        print(f"[INFO] Model file {model_file} not found locally. It will be downloaded.")
+        model = YOLO(model_file)  # load a pretrained model (n for Nano, fastest)
 
     # 2. Train usage
     # Ensure data.yaml is correct relative to execution
@@ -69,7 +76,7 @@ def train():
             data=yaml_path, 
             epochs=300,      
             imgsz=640, 
-            device='5',      # CUDA device 5
+            device='0',      # CUDA device 5
             plots=True,
             workers=16,      
             batch=64,        
@@ -79,7 +86,7 @@ def train():
 
         # 3. Validate
         print("Starting validation...")
-        metrics = model.val(device='5') 
+        metrics = model.val(device='0') 
         print(f"mAP@50-95: {metrics.box.map}")
 
         # 4. Export
