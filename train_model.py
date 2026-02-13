@@ -63,22 +63,23 @@ def train():
     print(f"Starting training using {yaml_path}")
     
     try:
+        # GPU configuration for RTX 5090 Server (8-GPU cluster)
+        # Using device '5' as requested
         results = model.train(
             data=yaml_path, 
-            epochs=100,
+            epochs=300,      
             imgsz=640, 
-            device='cpu',
+            device='5',      # CUDA device 5
             plots=True,
-            workers=0,
+            workers=16,      
+            batch=64,        
             fliplr=0.5,
             mosaic=0.5,
         )
 
         # 3. Validate
         print("Starting validation...")
-        # Force validation on CPU to avoid "Invalid device id" if user has messy CUDA environment
-        # or if simple "cpu" string doesn't propagate correctly in implicit calls.
-        metrics = model.val(device='cpu') 
+        metrics = model.val(device='5') 
         print(f"mAP@50-95: {metrics.box.map}")
 
         # 4. Export
